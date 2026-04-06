@@ -1,0 +1,37 @@
+# Privacy level 3-4 — NEVER in public git
+# (Keep in private repo only)
+# _private/
+
+# Obsidian internals
+.obsidian/workspace.json
+.obsidian/workspace-*.json
+.obsidian/workspace*.json
+.obsidian/cache/
+
+# Obsidian trash
+.trash/
+
+# Claude Code sessions
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+
+# Node
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Nightly data (temporary, regenerated)
+**/nattskift/.data/
+**/nattskift/logs/
