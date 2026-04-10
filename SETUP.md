@@ -178,6 +178,29 @@ mkdir -p .claude
 git clone https://github.com/kepano/obsidian-skills.git .claude/obsidian-skills
 ```
 
+### 2.7 Set up Obsidian Bases (optional but recommended)
+
+Obsidian Bases is a built-in feature (v1.9.10+) that turns your frontmatter into live database views. No plugin needed.
+
+Copy the scaffold bases into your vault:
+
+```bash
+# From this repo — copy _bases/ to your vault root
+cp -r _bases/ ~/vault/_bases/
+```
+
+Open any `.base` file directly from Obsidian's file explorer. Bases query your frontmatter (`status`, `tags`, `updated`, etc.) in real time.
+
+**Three starter bases are included:**
+
+| File | Covers | Purpose |
+|------|--------|---------|
+| `_bases/projects-active.base` | `03-projects/**` | Active and draft projects |
+| `_bases/inbox-triage.base` | `00-inbox/**` | Triage view, sort by date |
+| `_bases/knowledge-base.base` | `04-knowledge/**` | Research and insights |
+
+See [docs/obsidian-bases.md](docs/obsidian-bases.md) for syntax reference and examples.
+
 ---
 
 ## Phase 3: First Session (~10 min)

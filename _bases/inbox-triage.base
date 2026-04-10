@@ -1,0 +1,43 @@
+filters:
+  and:
+    - 'file.path.contains("00-inbox")'
+    - 'file.ext == "md"'
+
+properties:
+  created:
+    displayName: Created
+  tags:
+    displayName: Tags
+  status:
+    displayName: Status
+
+views:
+  - type: table
+    name: All — newest first
+    limit: 75
+    order:
+      - file.name
+      - created
+      - tags
+      - status
+
+  - type: table
+    name: Unprocessed (draft/active)
+    filters:
+      or:
+        - 'status == "active"'
+        - 'status == "draft"'
+    limit: 50
+    order:
+      - file.name
+      - created
+      - tags
+
+  - type: table
+    name: Daily notes
+    filters:
+      and:
+        - 'tags.contains("daily")'
+    order:
+      - file.name
+      - created

@@ -216,6 +216,25 @@ _private/          — Privacy level 3-4 (sensitive and deeply personal)
 
 ---
 
+## Vault Visualization — Obsidian Bases
+
+`.base` files in `_bases/` create live database views on top of vault frontmatter. Built into Obsidian v1.9.10+. No plugin required. Faster than Dataview.
+
+```
+_bases/
+├── projects-active.base    ← Active projects (filtered, table + card view)
+├── inbox-triage.base       ← Inbox triage, sorted by date
+└── knowledge-base.base     ← Research and insights
+```
+
+Bases query YAML frontmatter directly. As long as notes have `status`, `tags`, `created`, etc., views stay current automatically.
+
+**Relationship to the AI layer:** Bases answer structured questions ("show all active projects"). The AI answers semantic questions ("what connects these projects?"). Complementary, not redundant.
+
+See [docs/obsidian-bases.md](docs/obsidian-bases.md) for full syntax reference.
+
+---
+
 ## Design Principles
 
 1. **Primary model first, always.** Best available model. Fallback only on refusal.

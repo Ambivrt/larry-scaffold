@@ -1,0 +1,42 @@
+filters:
+  and:
+    - 'file.path.contains("04-knowledge")'
+    - 'file.ext == "md"'
+    - 'status != "archived"'
+
+properties:
+  status:
+    displayName: Status
+  created:
+    displayName: Created
+  tags:
+    displayName: Tags
+
+views:
+  - type: table
+    name: All knowledge — grouped by status
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - created
+      - tags
+
+  - type: table
+    name: Active research
+    filters:
+      and:
+        - 'status == "active"'
+    order:
+      - file.name
+      - created
+      - tags
+
+  - type: card
+    name: Card view
+    order:
+      - file.name
+      - tags
+      - created

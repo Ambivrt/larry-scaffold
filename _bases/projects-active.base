@@ -1,0 +1,55 @@
+filters:
+  and:
+    - 'file.path.contains("03-projects")'
+    - 'file.ext == "md"'
+    - 'status != "archived"'
+    - 'status != "done"'
+
+properties:
+  status:
+    displayName: Status
+  updated:
+    displayName: Updated
+  tags:
+    displayName: Tags
+
+views:
+  - type: table
+    name: All active — grouped by status
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - updated
+      - tags
+
+  - type: table
+    name: Active
+    filters:
+      and:
+        - 'status == "active"'
+    order:
+      - file.name
+      - updated
+      - tags
+
+  - type: table
+    name: Draft
+    filters:
+      and:
+        - 'status == "draft"'
+    order:
+      - file.name
+      - updated
+
+  - type: card
+    name: Card view
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - status
+      - updated
