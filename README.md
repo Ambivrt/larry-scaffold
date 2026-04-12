@@ -1,4 +1,4 @@
-# Larry Scaffold
+# ml-brainclone
 
 A scaffold for building a personal AI second brain using **Claude Code** and **Obsidian**.
 
