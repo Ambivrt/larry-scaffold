@@ -109,7 +109,7 @@ VOICE_MAP = {
 }
 
 DEFAULT_VOICE = "Iapetus"
-DEFAULT_SPEED = 0.95
+DEFAULT_SPEED = 1.2
 ```
 
 **Recommendation:** Test all available Gemini TTS voices and pick 3-5 that work well for your use case.
@@ -119,7 +119,7 @@ DEFAULT_SPEED = 0.95
 ## TTS Model Configuration
 
 ```python
-TTS_MODEL = "gemini-2.5-flash-preview-tts"
+TTS_MODEL = "gemini-2.5-pro-preview-tts"   # Pro: higher expressivity, nuanced emotion
 GCP_PROJECT = "{{GCP_PROJECT}}"
 GCP_LOCATION = "us-central1"
 ```

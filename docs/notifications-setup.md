@@ -123,39 +123,49 @@ Larry can respond with voice messages using Gemini TTS. Disabled by default — 
 
 ### Voice Profile
 
-Each personality gets a voice profile:
+Each personality gets a voice profile. Larry's default:
 
 ```python
-VOICE_CONFIG = {
-    "voice": "Enceladus",      # Gemini TTS voice name
-    "pitch": "-20%",           # SSML pitch adjustment
-    "rate_work": "1.1",        # 09-17 weekdays
-    "rate_chill": "0.95",      # evenings/weekends
-}
+LARRY_VOICE   = "Enceladus"
+LARRY_PITCH   = "-20%"        # baseline pitch (overridden per sentiment)
+LARRY_RATE    = "1.2"         # baseline rate (overridden per sentiment)
+TTS_MODEL     = "gemini-2.5-pro-preview-tts"
+
+LARRY_PERSONA = (
+    "[Deep voice. Calm authority. Late-night radio host who has seen it all. "
+    "Charlie Sheen's wit meets Ted Lasso's warmth — never loud, never rushed. "
+    "Dry humor lives just beneath every sentence. Speaks like he means it.]"
+)
 ```
 
 ### Sentiment-Adaptive Tone
 
-Incoming messages are analyzed for sentiment. The detected mood maps to SSML emotion tags:
+Incoming messages are analyzed for sentiment. Each sentiment maps to a full profile: emotion directive + pitch + rate override. Text replies are **suppressed** when `/voice` is active — only the voice message is sent.
 
-| Detected Sentiment | Emotion Tag |
-|-------------------|-------------|
-| happy | `[warm]` |
-| excited | `[engaged]` |
-| frustrated | `[calm][empathetic]` |
-| sad | `[gentle][empathetic]` |
-| curious | `[thoughtful]` |
-| tired | `[gentle][quiet emphasis]` |
-| neutral | (none) |
+| Sentiment | Rate | Pitch | Character |
+|-----------|------|-------|-----------|
+| `tired`   | 0.90 | -28%  | Soft, late-night, running on fumes |
+| `sad`     | 0.95 | -26%  | Gentle, unhurried, just present |
+| `angry`   | 1.00 | -24%  | Quiet intensity, measured restraint |
+| `frustrated` | 1.05 | -23% | Calm, grounded, empathetic |
+| `curious` | 1.15 | -20%  | Thoughtful, leaning in |
+| `neutral` | 1.20 | -20%  | Dry wit, slightly amused |
+| `happy`   | 1.25 | -17%  | Warm, genuine, real smile |
+| `playful` | 1.30 | -16%  | Light, tease, laugh under the surface |
+| `excited` | 1.35 | -15%  | Energized, can barely contain it |
+
+Longer replies (>120 chars) get automatic `<break>` pauses after sentence endings.
 
 ### TTS Pipeline
 
 ```
 Larry text reply
-  → wrap in SSML: <prosody pitch="-20%" rate="1.1">[emotion] text</prosody>
-  → Gemini TTS (gemini-2.5-flash-preview-tts) → PCM 24kHz
-  → FFmpeg → MP3 192kbps
-  → send as Telegram voice message
+  → _analyze_sentiment(user_message) → sentiment
+  → SENTIMENT_PROFILE[sentiment] → {emotion, rate, pitch}
+  → SSML: LARRY_PERSONA + emotion + <prosody pitch rate> + auto-breaks
+  → Gemini TTS (gemini-2.5-pro-preview-tts) → PCM 24kHz
+  → FFmpeg atempo + libmp3lame → MP3 192kbps
+  → send as Telegram voice message (text suppressed when /voice active)
 ```
 
 ---
