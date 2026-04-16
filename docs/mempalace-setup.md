@@ -452,6 +452,116 @@ All integrations are graceful — 10s timeout, silent fallback if Milla is unava
 
 ---
 
+## Room Routing — How It Works and Pitfalls
+
+The miner assigns each file to a room based on `mempalace.yaml`. Understanding the routing logic is critical — bad config sends 90% of files to `general`.
+
+### Detection Order (priority)
+
+```
+1. Folder path match     — file path contains a room name or keyword
+2. Filename match        — filename contains a keyword
+3. Content keyword score — counts keyword hits in file content, highest score wins
+4. Fallback              — "general" room
+```
+
+### Room Order Matters
+
+The YAML list is processed top-to-bottom. **First match wins.** This means:
+
+```yaml
+# BAD: "larry" in larry-system matches "larry-and-the-fourth" folder paths
+rooms:
+  - name: larry-system
+    keywords: [larry, config]
+  - name: latf
+    keywords: [latf, fourth]
+
+# GOOD: latf before larry-system, use ml-brainclone instead of larry
+rooms:
+  - name: latf
+    keywords: [latf, fourth, larry-and-the-fourth]
+  - name: larry-system
+    keywords: [ml-brainclone, config]
+```
+
+### Common Routing Traps
+
+| Trap | Example | Fix |
+|------|---------|-----|
+| **Substring collision** | `person` in team matches `01-personal/` folder | Remove ambiguous keywords, use specific names |
+| **Broad keywords** | `son` matches `personal`, `json`, `person` | Use longer, specific keywords |
+| **Order-dependent** | Generic room before specific | Put specific rooms earlier in YAML |
+| **Path vs content** | Folder `daily/` always wins over content keywords | Leverage path matching intentionally |
+
+### `exclude_dirs` — NOT Supported by Miner
+
+The `exclude_dirs` section in `mempalace.yaml` is **not read by the miner**. It's there for documentation only. To actually exclude directories:
+
+1. Add them to `.gitignore` (miner respects this)
+2. Or they must be in the hardcoded `SKIP_DIRS` list in `palace.py`
+
+### Verifying Room Distribution
+
+After mining, check distribution:
+
+```bash
+mempalace status
+```
+
+If `general` has more than ~5% of total drawers, your keywords need work. A well-tuned config routes 95%+ into specific rooms.
+
+---
+
+## Palace Rebuild — When and How
+
+### When to Rebuild
+
+- After changing embedding model (dimension mismatch = corrupt index)
+- After major room routing changes (re-route everything)
+- When ChromaDB reports "Error finding id" (HNSW/SQLite out of sync)
+- When two mine processes ran simultaneously (duplicate/partial state)
+
+### Rebuild Steps
+
+```bash
+# 1. Back up diary entries from WAL if needed
+# WAL location: ~/.mempalace/wal/write_log.jsonl
+# Diary entries have type: "diary_write" in the JSONL
+
+# 2. Nuke the palace
+rmdir /s /q %USERPROFILE%\.mempalace\palace
+# Or: rm -rf ~/.mempalace/palace
+
+# 3. Re-mine (use explicit Python path on Windows to avoid wrong interpreter)
+python -m mempalace mine {{VAULT_PATH}}
+
+# 4. Replay diary entries from WAL (see replay script below)
+# 5. Verify: mempalace status
+```
+
+### KG is Safe
+
+The knowledge graph lives in `~/.mempalace/knowledge_graph.sqlite3` — completely separate from ChromaDB. Palace nuke does NOT affect KG.
+
+### WAL Diary Recovery
+
+Diary entries are stored IN ChromaDB, so a palace nuke loses them. The WAL (`write_log.jsonl`) keeps a log. Entry format:
+
+```json
+{"timestamp": "...", "type": "diary_write", "data": {"agent_name": "Larry", "aaak_raw": "SESSION:...", "entry_preview": "truncated at 200 chars..."}}
+```
+
+Write a replay script that reads the WAL, expands AAAK format, and re-inserts into the fresh palace.
+
+### Avoiding Conflicts
+
+**Never run two mine processes simultaneously.** The `file_already_mined` check uses mtime — if process A mines a file, process B skips it (thinks it's done). Result: partial index.
+
+On Windows, be careful with `start cmd` or background processes — they may invoke a different Python interpreter (e.g., WindowsApps stub vs real Python). Always use the explicit path.
+
+---
+
 ## For Multiple Agents
 
 MemPalace supports **specialist agents** — each agent (Larry, Barry, Harry) can have its own wing and diary in the palace. Configure via `mempalace.yaml` after init.
