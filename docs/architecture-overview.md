@@ -164,16 +164,30 @@ User taps inline button or sends command
 
 ## Memory System
 
+Three layers working together:
+
 ```
+Layer 1: File-based (MEMORY.md)
 ~/.claude/projects/{{VAULT_SLUG}}/memory/
 ├── MEMORY.md          ← Index + active memories
 ├── user/              ← Facts about the user
 ├── feedback/          ← Learned behavioral preferences
 ├── project/           ← Active project memories
 └── reference/         ← Technical reference memories
+
+Layer 2: Semantic (MemPalace / Milla)
+~/.mempalace/palace/   ← ChromaDB vector database
+├── Search             ← Meaning-based vault search (19 MCP tools)
+├── Knowledge Graph    ← Subject-predicate-object facts (kg_add/query/invalidate)
+├── Diary              ← Session-to-session continuity (diary_read/write)
+└── Graph              ← Traverse connections, find tunnels between topics
+
+Layer 3: Active Context
+{{VAULT_PATH}}/_active-context.md  ← Current session state
 ```
 
 Memories persist across sessions. Created and updated by Larry during conversation.
+See [memory-system.md](memory-system.md) for full architecture.
 
 ---
 

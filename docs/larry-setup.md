@@ -22,12 +22,14 @@ larry
 
 On every new session (CLAUDE.md, Steps 1–3):
 
-1. Hook `load-context.sh` runs automatically (SessionStart)
-2. Larry reads `_active-context.md` — ongoing work, blockers, status
-3. Larry reads `{{ASSETS_PATH}}/.counter` — Barry's image counter
-4. Larry reads `03-projects/harry/harry.md` and `03-projects/barry/barry.md`
-5. Larry opens default Playwright tabs (see `operations/playwright-default-tabs.md`)
-6. Status confirmation: "Larry initialized (yolo). Barry (counter: NN). Harry ready. Playwright: N tabs. [Date]."
+1. **Step 1** — Hook `load-context.sh` runs automatically (SessionStart): reads `_active-context.md`, Barry counter, Harry/Barry status
+2. **Step 1b** — Check for `00-inbox/kg-updates-*.md` from night shift. If found: apply KG updates.
+3. **Step 2** — Read MemPalace diary: `mempalace_diary_read(agent_name="Larry", last_n=5)`. Integrate silently.
+4. **Step 2b** — Read active personality from `_current-personality.md`. Activate if not default. Note Parry mode.
+5. **Step 2c** — Inbox scan: check email, Telegram inbox, vault inbox. Flag actionable items only.
+6. **Step 3** — Status confirmation: "Larry initialized (yolo). Barry (counter: NN). Harry ready. [Date]. [Personality if not default]. [Inbox: N actionable]"
+
+**Playwright:** NOT started at session init. Lazy-loaded on first browser need (Barry generation, web search). This allows multiple Larry sessions in parallel.
 
 ---
 
@@ -36,11 +38,15 @@ On every new session (CLAUDE.md, Steps 1–3):
 Vault root: `{{VAULT_PATH}}/CLAUDE.md`
 
 Contains:
-- Mandatory session init (Steps 1–3)
+- Mandatory session init (Steps 1–3, including diary, personality, inbox scan)
+- Larry's Ten Commandments reference
+- Personalities system (switching rules, Parry middleware)
 - Vault purpose and folder structure
-- Rules (vault text-only, privacy, etc.)
+- Milla (MemPalace) — semantic memory rules (search, KG, diary, graph navigation)
+- Rules (vault text-only, privacy, image generation via Barry)
+- Privacy rules (_private/ separation, wikilink rules)
 - Device awareness (always primary machine)
-- Conventions (filenames, tags, status)
+- Conventions (Unicode characters, kebab-case filenames, tags, status)
 - CLI reference (obsidian commands)
 - Vault paths table
 
@@ -135,16 +141,18 @@ Positions are saved to `scripts/window-positions.json` and applied automatically
 
 ---
 
-## Playwright (MCP)
+## Playwright (MCP) — Lazy Init
 
 Persistent browser profile: `{{VAULT_PATH}}/../playwright-profile`
 
 Used for:
 - Venice Studio (Barry image generation)
-- Community monitoring (nightly batch 4)
+- Community monitoring (nightly batch)
 - General browsing
 
-Default tabs opened at session start (see `operations/playwright-default-tabs.md`).
+**Important:** Playwright is NOT opened at session init. It is lazy-loaded on the first call that needs a browser. On first open, read `operations/playwright-default-tabs.md` and open all configured tabs. This prevents Playwright conflicts when running multiple Larry sessions in parallel.
+
+Never run headless. Always visible browser window.
 
 ---
 
@@ -158,7 +166,11 @@ Default tabs opened at session start (see `operations/playwright-default-tabs.md
 | `barry-upscale.py` | `03-projects/barry/barry-upscale.py` | Image upscaling (Real-ESRGAN) |
 | `harry-tts.py` | `03-projects/harry/harry-tts.py` | Text-to-speech |
 | `parry.py` | `03-projects/parry/parry.py` | Privacy/tone/quality gatekeeper |
-| `cost-logger.py` | `03-projects/ml-brainclone/operations/cost-logger.py` | Cost logging |
+| `larry_notify.py` | `03-projects/{{PROJECT_NAME}}/notifications/larry_notify.py` | Telegram notifications (send) |
+| `larry_bot_listener.py` | `03-projects/{{PROJECT_NAME}}/notifications/larry_bot_listener.py` | Telegram listener (receive + respond) |
+| `larry_checkin.py` | `03-projects/{{PROJECT_NAME}}/notifications/larry_checkin.py` | Proactive check-in (scheduled) |
+| `larry_session_nudge.py` | `03-projects/{{PROJECT_NAME}}/notifications/larry_session_nudge.py` | Post-session Telegram nudge |
+| `cost-logger.py` | `03-projects/{{PROJECT_NAME}}/operations/cost-logger.py` | Cost logging |
 
 ---
 
@@ -199,15 +211,16 @@ Fallback: Venice (DeepSeek/Qwen, E2EE) on guardrail refusal.
 
 ---
 
-## Personalities (Optional System)
+## Personalities System
 
-Larry supports named personalities that can be activated on explicit command. Each personality has a distinct voice, tone, and perspective. They never activate automatically.
+Larry supports named personalities that can be activated on explicit user command. Each personality has a distinct voice, tone, and perspective. They **never activate automatically**.
 
-Implement by creating character sheets in `03-projects/ml-brainclone/personalities/`:
+### Structure
+
 ```
-personalities/
+03-projects/{{PROJECT_NAME}}/architecture/personalities/
 ├── character-1/
-│   ├── character.md      ← Character sheet
+│   ├── character.md      ← Character sheet (voice, backstory, rules)
 │   ├── memory/           ← Character-specific memory
 │   └── prompts/
 │       ├── text.md       ← Text prompt template
@@ -217,7 +230,34 @@ personalities/
     └── ...
 ```
 
-Current personality tracked in `_current-personality.md`.
+### Active personality tracking
+
+`03-projects/{{PROJECT_NAME}}/architecture/_current-personality.md` — contains:
+- `personality: larry` (or active character name)
+- `parry_mode: on` / `off` / `strict`
+- Last switch date
+
+### Switching rules
+
+- **Never automatic** — Larry NEVER switches personality on its own
+- Switch ONLY on user command (trigger words or explicit "activate X")
+- Return to default: "back" / "larry" / "default"
+- On switch: read character's `character.md` + `prompts/text.md`, keep the voice watertight
+- On switch: update `_current-personality.md`
+
+### Parry as middleware
+
+Parry runs in background when `parry_mode: on` or `strict`. Interrupts on:
+- Privacy violations (L1 content leaking to L3/L4 destinations)
+- Destructive git operations
+- Unexpected costs
+- External communications without approval
+
+Parry never blocks — only flags. User always decides.
+
+### Multi-bot (Telegram)
+
+Each personality can have its own Telegram bot for separate conversations. See [notifications-setup.md](notifications-setup.md) for multi-bot configuration.
 
 ---
 

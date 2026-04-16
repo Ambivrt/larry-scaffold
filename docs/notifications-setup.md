@@ -34,6 +34,31 @@ Larry / Barry / Harry / Parry
 
 ## Components
 
+### `larry_checkin.py` — Proactive Check-in
+
+Scheduled script (e.g. 10:00, 15:00, 20:00 via Task Scheduler). Reads vault context, calendar, and last interaction — sends a Telegram message ONLY if there's something actionable. Never PDA.
+
+```bash
+python larry_checkin.py              # Run check-in logic
+python larry_checkin.py --dry-run    # Show what would be sent
+python larry_checkin.py --force      # Send regardless of filters
+```
+
+**Anti-PDA rules (configurable):**
+- Minimum 4 hours between check-ins
+- Maximum 2 proactive check-ins per day
+- Quiet hours: 23:00-07:00
+- Skip if recent chat within last 60 minutes
+
+### `larry_session_nudge.py` — Post-Session Nudge
+
+Called as a Claude Code hook (`PostSessionEnd`) or manually. Reads latest session activity and sends a short summary message via Telegram.
+
+```bash
+python larry_session_nudge.py "short session summary"
+python larry_session_nudge.py --auto    # Read from latest git activity
+```
+
 ### `larry_notify.py` — Send
 
 Importable module. All Larry scripts: `from larry_notify import notify`.
