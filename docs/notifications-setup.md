@@ -23,7 +23,8 @@ Larry / Barry / Harry / Parry
          ├─► _private/notify-queue.json    (async bridge)
          ├─► _private/telegram/YYYY-MM-DD.md  (daily log)
          ├─► _private/telegram-chat-history.json  (rolling context)
-         ├─► Gemini 2.5 Flash (vision / STT)
+         ├─► Claude Agent SDK (vision — primary, uses Claude Code auth)
+         ├─► Gemini 2.5 Flash (vision fallback / STT)
          ├─► Gemini TTS (voice responses)
          └─► Anthropic SDK (text responses — see v2 spec below)
 ```
@@ -111,8 +112,12 @@ Marcus sends text
 Marcus sends photo
   → download largest resolution from Telegram API
   → save to {{ASSETS_PATH}}/imported/telegram/
-  → Gemini 2.5 Flash vision analysis → JSON:
+  → Claude Agent SDK (primary) — spawns `claude` via bundled CLI,
+    uses existing Claude Code auth (no separate API key needed),
+    tools restricted to [Read], max_turns=3 → returns JSON:
     {category, title, description, tags, extracted, vault_note, suggested_action}
+    Falls back to Gemini 2.5 Flash on exception or empty response
+    (useful when Claude refuses NSFW or content-policy sensitive frames).
   → create vault-note in {{VAULT_PATH}}/00-inbox/
   → queue entry with analysis metadata
   → categorized reply (receipt/inspiration/screenshot/document/photo)
@@ -276,8 +281,9 @@ python larry_bot_listener.py
 
 ### 5. Dependencies
 ```bash
-pip install requests google-genai
+pip install requests google-genai claude-agent-sdk
 # FFmpeg required for TTS (system install)
+# claude-agent-sdk bundles its own `claude` CLI — uses existing Claude Code auth
 ```
 
 ### 6. GCP Setup (for vision + voice)
