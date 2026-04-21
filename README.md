@@ -25,12 +25,14 @@ ml-brainclone/
 │   ├── brains-bus-setup.md       <- SQLite event bus between agents, guarded by Parry
 │   ├── task-dispatch.md          <- Inter-agent work queue: dispatch from any channel
 │   ├── proactivity.md            <- Larry acts, doesn't just report: scanner + dispatcher + nightly triggers
-│   └── privacy-architecture.md   <- Privacy layers + auto-tagging + tone learning
+│   ├── privacy-architecture.md   <- Privacy layers + auto-tagging + tone learning
+│   └── eval-smoketest.md         <- Regression-check pattern for model swaps + CLAUDE.md edits
 ├── templates/
 │   ├── daily.md                  <- Daily note template
 │   ├── project.md                <- Project template
 │   ├── meeting.md                <- Meeting notes template
-│   └── research.md               <- Research note template
+│   ├── research.md               <- Research note template
+│   └── smoketest.md              <- 10-test regression smoketest (copy, customize, run)
 ├── scripts/
 │   ├── load-context.sh               <- Session init hook (reads active context)
 │   ├── collect-vault-data.sh         <- Nightly vault data collection
