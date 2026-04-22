@@ -163,10 +163,40 @@ def executor_parry(task: dict) -> dict:
             "detail": f"Input:\n{task['description']}", "error": None}
 
 
+def executor_tarry(task: dict) -> dict:
+    """Tarry-task: schemalägg påminnelse/follow-up via tarry_service."""
+    title = task["title"]
+    desc = task["description"]
+    # Tarry tasks skrivs till tarry-queue.json, inte som claude -p
+    import json
+    from pathlib import Path
+    queue_path = Path(_vault_root() / "_private" / "tarry-queue.json")
+    try:
+        q = json.loads(queue_path.read_text(encoding="utf-8"))
+    except Exception:
+        q = {"reminders": [], "follow_ups": [], "recurring": [], "interrupted": []}
+    q["reminders"].append({
+        "id": f"rem-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "created": datetime.now().isoformat(),
+        "created_by": "dispatch",
+        "what": title,
+        "when": desc,  # dispatcher skickar tid i description
+        "channels": ["telegram", "session"],
+        "status": "pending",
+        "context": f"Dispatched task: {title}",
+    })
+    tmp = queue_path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(q, indent=2, ensure_ascii=False), encoding="utf-8")
+    import os as _os
+    _os.replace(str(tmp), str(queue_path))
+    return {"success": True, "summary": f"Reminder skapad: {title}"}
+
+
 EXECUTORS = {"larry": executor_larry,
              "harry": executor_harry,
              "barry": executor_barry,
-             "parry": executor_parry}
+             "parry": executor_parry,
+             "tarry": executor_tarry}
 
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────

@@ -22,6 +22,8 @@ ml-brainclone/
 │   ├── mempalace-setup.md        <- MemPalace (semantic memory) setup + GPU config
 │   ├── memory-system.md          <- Persistent memory architecture
 │   ├── parry-setup.md            <- Parry (gatekeeper agent) setup + commands
+│   ├── tarry-setup.md            <- Tarry (temporal agent) setup + queue + Task Scheduler
+│   ├── farry-setup.md            <- Farry (translation skill) setup + Telegram commands
 │   ├── brains-bus-setup.md       <- SQLite event bus between agents, guarded by Parry
 │   ├── task-dispatch.md          <- Inter-agent work queue: dispatch from any channel
 │   ├── proactivity.md            <- Larry acts, doesn't just report: scanner + dispatcher + nightly triggers
@@ -43,22 +45,31 @@ ml-brainclone/
 │   ├── gws_mailer.py                 <- Outgoing-mail helper with local archiving
 │   ├── parry-scheduled-task.xml      <- Windows Task Scheduler template for Parry autostart
 │   └── register-parry-task.ps1       <- One-shot registration script (run once at setup)
+├── architecture/
+│   ├── personalities/
+│   │   ├── README.md                 <- Personality system: character sheets, switching rules, middleware
+│   │   ├── _current-personality-template.md  <- Active personality tracker template
+│   │   └── example-default/
+│   │       └── character.md          <- Example default personality character sheet
+│   └── telegram-v2-spec.md          <- Platform adapter spec: multi-channel message routing
 ├── .gitignore                    <- Template .gitignore for your vault
 └── LICENSE
 ```
 
 ---
 
-## The Four Agents
+## The Agent Ecosystem
 
 | Agent | Modality | What it does | Technology |
 |-------|----------|-------------|------------|
 | **Larry** | Text | Orchestrator. Thinks, writes, codes, plans, remembers. | Claude Code (Opus/Sonnet) |
 | **Barry** | Image | Generates images, sorts visual material, maintains visual index. | Venice Chat via Playwright |
 | **Harry** | Audio | Text-to-speech, music, sound effects, mixing. | Gemini TTS (Vertex AI) + FFmpeg |
-| **Parry** | Filter | Privacy enforcement, tone control, quality gating. | Python middleware |
+| **Parry** | Filter | Privacy enforcement, tone control, quality gating. | Python daemon (parry_service.py) |
+| **Tarry** | Time / Scheduling | Reminders, follow-ups, recurring tasks, interrupted session recovery. | Python daemon (tarry_service.py) |
+| **Farry** | Understanding / Translation | All languages, human and machine. Real-time translation, machine→human explanation, code↔code, agent↔agent bridge. | Larry skill (inline) |
 
-Larry orchestrates everything. Barry and Harry are invoked by Larry when needed. Parry runs as middleware on commits, sends, and generation.
+Larry orchestrates everything. Barry and Harry are invoked by Larry when needed. Parry and Tarry run as background daemons. Farry is a skill built into Larry — no separate process.
 
 ---
 
@@ -147,6 +158,11 @@ Throughout all files, replace these with your own values:
 | [docs/logging-architecture.md](docs/logging-architecture.md) | Save-everything rule: transcript, audit, mail, event-bus |
 | [docs/task-dispatch.md](docs/task-dispatch.md) | Inter-agent work queue: dispatch tasks from any channel (Telegram, mail, CLI) |
 | [docs/proactivity.md](docs/proactivity.md) | Larry acts, doesn't just report: init-scanner + bus dispatcher + nightly triggers |
+| [docs/agent-capabilities.md](docs/agent-capabilities.md) | Capability matrix for all agents: tools, skill domains, ecosystem flow |
+| [docs/tarry-setup.md](docs/tarry-setup.md) | Tarry temporal daemon: reminders, follow-ups, Task Scheduler autostart |
+| [docs/farry-setup.md](docs/farry-setup.md) | Farry translation skill: all languages, code↔code, Telegram /f command |
+| [architecture/personalities/README.md](architecture/personalities/README.md) | Personality system: character sheets, switching rules, Parry middleware |
+| [architecture/telegram-v2-spec.md](architecture/telegram-v2-spec.md) | Platform adapter spec: multi-channel message routing (Telegram, CLI, email) |
 
 ---
 

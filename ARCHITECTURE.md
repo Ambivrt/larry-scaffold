@@ -38,8 +38,10 @@ Three modes. One brain. Specialized per modality.
 | **Text** | Text | Orchestrator. Thinks, writes, codes, plans, remembers. The main brain. |
 | **Image** | Vision | Sees, creates, remembers visually. Input (camera/analysis) and output (generation). |
 | **Audio** | Sound | Hears, speaks, creates music/audio. Voice in, voice out, TTS, transcription, composition. |
+| **Time** | Scheduling | Tracks time obligations. Reminders, follow-ups, recurring tasks, interrupted sessions. Daemon. |
+| **Translation** | Understanding | Bridges all languages and formats. Human languages, machine protocols, code↔code. Larry skill. |
 
-All three modes handle all four privacy levels. All three have access to the freedom router.
+All modes handle all four privacy levels. All have access to the freedom router.
 
 ### Orchestration Model
 
@@ -49,19 +51,29 @@ Text mode is the orchestrator. Image and Audio are invoked when the task require
 YOU
  │
  ▼
-TEXT MODE (primary)
+TEXT MODE (primary / Larry)
  │
  ├─ Text task? → Handles directly
  │
- ├─ Image task? → Invokes IMAGE MODE
+ ├─ Image task? → Invokes IMAGE MODE (Barry)
  │   ├─ "Analyze this image" → Vision
  │   ├─ "Create a diagram" → Generation
  │   └─ "What do you see?" → Vision
  │
- ├─ Audio task? → Invokes AUDIO MODE
+ ├─ Audio task? → Invokes AUDIO MODE (Harry)
  │   ├─ "Transcribe this" → STT
  │   ├─ "Read this aloud" → TTS
  │   └─ "Create a jingle" → Music
+ │
+ ├─ Time task? → Invokes TIME MODE (Tarry daemon)
+ │   ├─ "Remind me in 2h" → Reminder queued
+ │   ├─ "Follow up on X tomorrow" → Follow-up scheduled
+ │   └─ "Every Monday: X" → Recurring task registered
+ │
+ ├─ Translation task? → Invokes TRANSLATION (Farry skill, inline)
+ │   ├─ "Translate this" → Human language translation
+ │   ├─ "What does this JSON mean?" → Machine→human explanation
+ │   └─ "Convert this Python to JS" → Code↔code translation
  │
  └─ Multi-modal? → Orchestrates sequence
      └─ "Photograph the whiteboard, transcribe,
@@ -70,6 +82,17 @@ TEXT MODE (primary)
 ```
 
 You can also go directly to Image or Audio mode without Text orchestrating — but Text always has context of what happened.
+
+### Agent Architecture — Daemon vs Skill
+
+Two patterns for extending the ecosystem:
+
+| Pattern | Examples | Process model | Restart |
+|---------|----------|--------------|---------|
+| **Daemon** | Parry, Tarry | Separate long-running Python process | Windows Task Scheduler / supervisor |
+| **Skill** | Farry | Inline Larry capability, no separate process | Not needed — lives inside Larry |
+
+Daemons are appropriate for background work that must happen independently of Larry's attention (gating, scheduling). Skills are appropriate for capabilities Larry invokes on demand.
 
 ---
 
@@ -269,6 +292,21 @@ The system is evolving toward a unified PWA that serves as the primary interface
 See [architecture/telegram-v2-spec.md](architecture/telegram-v2-spec.md) for the full technical spec.
 
 **Status:** Design phase — parked until architectural decisions are made.
+
+---
+
+## Agent Relations
+
+| Agent | Role | Invoked by | Invokes | Process type |
+|-------|------|-----------|---------|--------------|
+| **Larry** | Orchestrator | User / Telegram / mail / CLI | Barry, Harry, Tarry, Farry | Claude Code session |
+| **Barry** | Image generation | Larry | Venice (Playwright) | On-demand subprocess |
+| **Harry** | Audio / TTS | Larry | Vertex AI / Whisper | On-demand subprocess |
+| **Parry** | Privacy gatekeeper | Always-on middleware | Larry (flags) | Background daemon |
+| **Tarry** | Time / scheduling | Larry (queue write) | Larry (fires reminders) | Background daemon |
+| **Farry** | Translation / interpretation | Larry (skill call) | — (inline) | Larry skill, no process |
+
+All inter-agent communication flows through the brains-bus (SQLite). Parry sees all bus events as gatekeeper before they reach their destination.
 
 ---
 

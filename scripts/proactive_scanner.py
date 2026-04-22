@@ -62,6 +62,7 @@ ACTION_KEYWORDS = {
     "barry": ["image", "generate", "draw", "photo", "render"],
     "harry": ["transcribe", "voice", "audio", "mix", "tts"],
     "larry": ["fix", "triage", "analyse", "summarise", "look up", "write"],
+    "tarry": ["remind", "påminn", "deadline", "follow up", "schedule", "klocka", "timer"],
 }
 
 STALE_INBOX_HOURS = 24
@@ -214,7 +215,7 @@ def _scan_stale_inbox(dedup, dispatched, dry_run, cap):
 def _scan_failed_tasks(dedup, dispatched, dry_run, cap):
     cutoff = datetime.now() - timedelta(hours=FAILED_TASK_LOOKBACK_HOURS)
     failed = []
-    for agent in ("larry", "harry", "barry"):
+    for agent in ("larry", "harry", "barry", "tarry"):
         d = TASKS_DIR / agent / "failed"
         if not d.exists():
             continue

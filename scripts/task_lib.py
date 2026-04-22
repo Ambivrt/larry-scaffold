@@ -30,8 +30,8 @@ def _vault_root() -> Path:
     return Path.home() / "vault"
 
 
-AgentName = Literal["larry", "harry", "barry", "parry"]
-VALID_AGENTS = ("larry", "harry", "barry", "parry")
+AgentName = Literal["larry", "harry", "barry", "parry", "tarry"]
+VALID_AGENTS = ("larry", "harry", "barry", "parry", "tarry")
 
 
 def _inbox() -> Path:

@@ -192,7 +192,7 @@ def _rule_proactive_trigger(ev):
     reason = p.get("reason", "")
     dedup = p.get("dedup") or f"proactive:{agent}:{title}"
 
-    if agent not in ("larry", "harry", "barry", "parry"):
+    if agent not in ("larry", "harry", "barry", "parry", "tarry"):
         log.warning(f"proactive-trigger: invalid agent {agent}")
         return
     if not title:
