@@ -31,6 +31,7 @@ ml-brainclone/
 │   ├── eval-smoketest.md         <- Regression-check pattern for model swaps + CLAUDE.md edits
 │   ├── skills-system.md          <- Skills: discovery, frontmatter format, self-patch
 │   ├── system-taxonomy.md        <- system/* tag schema + SYSTEM-INDEX pattern (separate system from personal)
+│   ├── content-campaigns.md      <- Content campaign management: calendar + Tarry chains + morning brief
 │   └── vault-ingest.md           <- Document conversion tool (MarkItDown)
 ├── templates/
 │   ├── daily.md                  <- Daily note template
@@ -177,7 +178,8 @@ Throughout all files, replace these with your own values:
 | [docs/task-dispatch.md](docs/task-dispatch.md) | Inter-agent work queue: dispatch tasks from any channel (Telegram, mail, CLI) |
 | [docs/proactivity.md](docs/proactivity.md) | Larry acts, doesn't just report: init-scanner + bus dispatcher + nightly triggers |
 | [docs/agent-capabilities.md](docs/agent-capabilities.md) | Capability matrix for all agents: tools, skill domains, ecosystem flow |
-| [docs/tarry-setup.md](docs/tarry-setup.md) | Tarry temporal daemon: reminders, follow-ups, Task Scheduler autostart |
+| [docs/tarry-setup.md](docs/tarry-setup.md) | Tarry temporal daemon: reminders, follow-ups, release chains, Task Scheduler autostart |
+| [docs/content-campaigns.md](docs/content-campaigns.md) | Content campaign management: calendar + Tarry chains + morning brief pipeline |
 | [docs/farry-setup.md](docs/farry-setup.md) | Farry translation skill: all languages, code↔code, Telegram /f command |
 | [architecture/personalities/README.md](architecture/personalities/README.md) | Personality system: character sheets, switching rules, Parry middleware |
 | [architecture/telegram-v2-spec.md](architecture/telegram-v2-spec.md) | Platform adapter spec: multi-channel message routing (Telegram, CLI, email) |

@@ -205,6 +205,89 @@ The `agent_task_watcher` picks this up and appends it to `tarry-queue.json`.
 
 ---
 
+## Release Chain Pattern
+
+A release chain is a pre-scheduled cascade of reminders tied to a project milestone (album release, product launch, event). Instead of creating reminders one at a time, you build the full chain in advance and let Tarry fire them on schedule.
+
+### When to use
+
+- Product/content launches with a fixed date and known preparation steps
+- Multi-week campaigns where each week has different tasks
+- Anything with a countdown where missing a step derails the timeline
+
+### Structure
+
+```json
+{
+  "reminders": [
+    {
+      "id": "launch-content-brief-w1",
+      "created": "2026-04-26T22:00:00",
+      "fire_at": "2026-04-27T09:00:00",
+      "status": "waiting",
+      "message": "Content brief week 1. LinkedIn post Monday, playlist curation Tuesday.",
+      "context": "See content-calendar.md for details."
+    },
+    {
+      "id": "launch-verify-minus3",
+      "created": "2026-04-26T22:00:00",
+      "fire_at": "2026-05-21T08:00:00",
+      "status": "waiting",
+      "message": "VERIFICATION (-3d): All metadata correct? Assets uploaded? Links working?",
+      "context": "Last chance to fix issues before launch."
+    },
+    {
+      "id": "launch-day",
+      "created": "2026-04-26T22:00:00",
+      "fire_at": "2026-05-24T07:00:00",
+      "status": "waiting",
+      "message": "LAUNCH DAY. Run full checklist.",
+      "context": "See launch-spec.md section 5.3."
+    }
+  ],
+  "recurring": [
+    {
+      "id": "launch-weekly-report",
+      "created": "2026-04-26T22:00:00",
+      "schedule": "every friday 08:00",
+      "message": "Weekly metrics report — collect data, deliver in daily note.",
+      "context": "Report format in launch-spec.md section 5.2."
+    }
+  ]
+}
+```
+
+### Key fields
+
+| Field | Purpose |
+|-------|---------|
+| `fire_at` | ISO datetime — when Tarry fires this reminder |
+| `context` | Pointer to the spec/doc with full details (keeps the reminder short) |
+| `include_in_brief` | Optional. Path to a file that should be injected into the next morning brief email (e.g., a pre-written post ready to copy-paste) |
+
+### Building a chain
+
+1. Define the milestone date (T-0)
+2. Work backwards: what must happen at T-3, T-7, T-14, T-21?
+3. Add weekly recurring tasks (reports, content briefs)
+4. Add verification checkpoints near T-0
+5. Write all reminders in one batch — Larry generates the full JSON
+
+### Lifecycle
+
+```
+waiting → fired → acknowledged
+              ↘ snoozed → fired (again)
+```
+
+Reminders stay `waiting` until `fire_at` passes. Tarry fires them into the morning brief / Telegram / session. Larry marks them `acknowledged` after the user sees them. Recurring reminders re-queue automatically.
+
+### Content calendar integration
+
+A release chain pairs naturally with a vault-based content calendar (`content-calendar.md`). The calendar holds the full plan (dates, channels, topics, status). Tarry reminders point into it via `context`, keeping reminders lightweight.
+
+---
+
 ## See Also
 
 - [parry-setup.md](parry-setup.md) — Parry daemon (same process model)

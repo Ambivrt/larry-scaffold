@@ -150,6 +150,8 @@ Active skill domains: brand-thinking, business-law, seo-sem, business-planning, 
 | Reminders / deadlines | tarry-queue.json + bus | Telegram + session-init |
 | Follow-ups (check after N days) | Gmail / Telegram scan | Auto-escalation |
 | Recurring tasks | Cron expressions | Dynamically created |
+| Release chains | Pre-scheduled reminder cascades | Multi-week campaign automation |
+| Content campaign management | Calendar + Tarry + morning brief | Draft injection via `include_in_brief` |
 | Session continuity | Interrupted-tracking | "You were interrupted doing X" |
 | Proactive triggers | Calendar + deadline-approach | T-3, T-1, T-0 |
 
