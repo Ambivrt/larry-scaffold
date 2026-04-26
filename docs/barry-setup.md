@@ -130,6 +130,193 @@ Always verify BEFORE generating:
 
 ---
 
+## ComfyUI / SDXL — Local Generation Alternative
+
+ComfyUI with SDXL checkpoints provides local GPU-based image generation. Complements Venice/Chroma -- does not replace it. Main advantage: reference-based generation (IP-Adapter, FaceID) and pose control (ControlNet) that cloud services cannot offer.
+
+### When to Use ComfyUI vs Venice
+
+| | SDXL (ComfyUI, local) | Chroma (Venice, cloud) |
+|---|---|---|
+| Architecture | SDXL 1.0 (6.6B params) | FLUX-based (8.9B params) |
+| Prompt style | Tags + natural language, mixed | Natural language only |
+| Negative prompt | Yes, important | No |
+| Prompt adherence | Good, but Chroma better on complex scenes | Superior |
+| Anatomical quality | Good with right checkpoint, needs more guidance | Better out-of-box |
+| Speed | 30-60s local (8GB VRAM) | 10-15s (cloud) |
+| Cost | Free (local GPU) | Free (Venice tier) |
+| IP-Adapter / FaceID | Yes | No |
+| ControlNet (pose) | Yes | No |
+| Ecosystem | Thousands of checkpoints and LoRAs | Single model |
+
+**Rule of thumb:** Chroma for free-form text-to-image. SDXL for reference-based generation (IP-Adapter, FaceID), pose control (ControlNet), and when community checkpoints provide a quality edge.
+
+### Installation
+
+1. Clone ComfyUI into the local repo directory:
+   ```bash
+   cd {{GIT_REPO_PATH}}
+   git clone https://github.com/comfyanonymous/ComfyUI.git
+   cd ComfyUI
+   pip install -r requirements.txt
+   ```
+
+2. Download SDXL base model:
+   - `sd_xl_base_1.0_0.9vae.safetensors` into `models/checkpoints/`
+   - Or use community SDXL checkpoints (e.g., RealVisXL Lightning, Juggernaut XL)
+
+3. Install custom nodes (as needed):
+   - **ComfyUI-Manager** -- node browser and installer
+   - **IP-Adapter Plus** -- reference-based generation
+   - **FaceID** -- face consistency across a series (requires InsightFace)
+   - **ControlNet** -- pose, depth, canny edge control
+
+4. Launch:
+   ```bash
+   python main.py --lowvram
+   ```
+   Opens at `http://127.0.0.1:8188` by default.
+
+### File Paths
+
+```
+{{GIT_REPO_PATH}}/ComfyUI/
+  models/
+    checkpoints/     -- SDXL base + community checkpoints (.safetensors)
+    loras/           -- LoRA files (.safetensors)
+    controlnet/      -- ControlNet models
+    ipadapter/       -- IP-Adapter models
+    insightface/     -- FaceID models (InsightFace)
+  input/             -- Reference images for IP-Adapter / FaceID
+  output/            -- Generated images (move to Barry inbox after QA)
+```
+
+### VRAM Requirements
+
+| GPU VRAM | Default Resolution | Flag | Notes |
+|----------|-------------------|------|-------|
+| 6 GB | 768x768 | `--lowvram` | Functional but slow, no refiner |
+| 8 GB | 768x768 (safe), 1024x1024 (possible) | `--lowvram` | RTX 2080 sweet spot |
+| 12 GB | 1024x1024 | (none needed) | Comfortable, refiner enabled |
+| 16 GB+ | 1024x1024 | (none needed) | Full pipeline, multiple LoRAs |
+
+With 8 GB VRAM: use `--lowvram` flag. Keep LoRA count at 3 or fewer. Refiner is optional -- skip it for faster iterations.
+
+### Sampler Settings
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| **CFG** | 5-7 | 5-6 for photorealism, 7 for illustration. Never above 9 |
+| **Steps** | 25-35 | 25 standard, 30-35 for detail (portraits, skin) |
+| **Sampler** | DPM++ 2M Karras | Balanced quality. Alt: Euler a (fast), DPM++ SDE (portrait) |
+| **Scheduler** | Karras | Best with DPM++ samplers |
+| **Seed** | -1 (random) | Fixed seed for reproduction |
+
+### Resolution Guide
+
+SDXL is trained on 1024x1024. Only use these aspect ratios:
+
+| Format | Resolution | Use Case |
+|--------|-----------|----------|
+| Square | 1024x1024 | Standard |
+| Portrait | 832x1216 | Portraits, close-ups |
+| Portrait alt | 896x1152 | Narrower portrait |
+| Landscape | 1216x832 | Wide scenes |
+| Landscape alt | 1152x896 | Action shots |
+| Ultra-wide | 1536x640 | Panoramas |
+
+On 8 GB VRAM, default to 768x768 with `--lowvram`. 1024x1024 is possible but slower.
+
+### Prompt Style (SDXL-Specific)
+
+SDXL understands both tag-based and natural language prompts. Mixing works best.
+
+**Structure:** Subject first (most important), then details, environment, mood, style, camera.
+
+```
+A 30 year old woman with curly brown hair, blue dress, standing in a sunlit garden,
+warm afternoon light, candid amateur photo, shot on Canon EOS R5, 85mm f/1.4
+```
+
+**Negative prompt baseline:**
+```
+low quality, blurry, pixelated, distorted, extra limbs, watermark, text, deformed hands, bad anatomy
+```
+
+Keep negative prompts short -- 1-2 lines maximum. Overspecification hurts quality.
+
+**Weight syntax:** `(term:weight)` -- safe range 0.8-1.4, max 3-4 weighted terms per prompt.
+
+### Refiner (Optional)
+
+The SDXL refiner improves faces, skin texture, shadows, and edges. Recommended for portraits, skip for fast iterations.
+
+| Parameter | Value |
+|-----------|-------|
+| Switch point | 0.75 (75% of steps) |
+| Step split | 15 base + 10 refiner |
+| Sampler | DPM++ 2M Karras |
+
+### Community Checkpoints
+
+Base SDXL 1.0 works but community checkpoints provide better results for specific styles.
+
+| Checkpoint | Strength |
+|-----------|----------|
+| **RealVisXL V5.0 Lightning** | Sharp photorealism, fast (6-8 steps) |
+| **Juggernaut XL** | All-round photorealism |
+| **CyberRealistic XL** | Editorial, clean photographic sharpness |
+
+All stored in `models/checkpoints/`. Download from CivitAI or HuggingFace.
+
+### LoRA Usage
+
+Community LoRAs provide fine-tuned control over style, character consistency, and pose.
+
+- Use only SDXL-compatible LoRAs (SD 1.5 LoRAs will not work)
+- Store in `models/loras/`
+- Maximum 3 LoRAs simultaneously for stability
+
+| Type | Weight Range |
+|------|-------------|
+| Character / face | 0.6-0.9 |
+| Style | 0.4-0.7 |
+| Clothing / object | 0.3-0.6 |
+
+### IP-Adapter and FaceID (Reference-Based Generation)
+
+The key capability ComfyUI adds that Venice cannot provide.
+
+**IP-Adapter Plus:**
+- Upload a reference image to generate new images preserving style, composition, or character appearance
+- Best for: style transfer, character consistency, visual moodboards
+- No training required -- works at inference time
+
+**FaceID PlusV2:**
+- Maintains consistent face identity across an image series
+- Requires InsightFace (pip install insightface, needs C++ build tools)
+- Enables generating multiple images with the same face without training a LoRA
+
+### Upscale Strategy (Local)
+
+| Method | Setting | Use Case |
+|--------|---------|----------|
+| HighRes Fix | Denoise 0.35-0.45, 1.5-2x, 15-20 steps | Standard |
+| ESRGAN 4x-UltraSharp | External post-process | Premium quality |
+| img2img refine | Low denoise (0.3) after upscale | Maximum detail |
+
+### Integration with Barry Pipeline
+
+Generated images from ComfyUI go through the same Barry pipeline:
+1. Generate in ComfyUI (output lands in `ComfyUI/output/`)
+2. Move to `{{ASSETS_PATH}}/00-inbox/`
+3. Run `barry-sort.py` for vision analysis and categorization
+4. Counter assignment, metadata, and NAS backup as usual
+
+ComfyUI is NOT launched at session init. Open only when a task requires local generation (IP-Adapter, FaceID, ControlNet, or specific checkpoint).
+
+---
+
 ## Scripts
 
 | Script | Function |

@@ -243,6 +243,65 @@ Install: `pip install faster-whisper`
 
 ---
 
+## Music Generation (Lyria — Vertex AI)
+
+Lyria is Google's music generation model family, available through Vertex AI. It gives Harry the ability to generate instrumental clips and full songs with vocals via API — no browser, no web pipeline.
+
+### Model Variants
+
+| Model | ID | Status | Max Length | Vocals | Price |
+|-------|-----|--------|------------|--------|-------|
+| Lyria 2 | `lyria-002` | **GA** | 30s instrumental | No | $0.06 / 30s clip |
+| Lyria 3 Clip | `lyria-3-clip-preview` | Preview | 30s | Yes | $0.04 / 30s clip |
+| Lyria 3 Pro | `lyria-3-pro-preview` | Preview | ~3 min | Yes | $0.08 / song |
+| Lyria RealTime | (Gemini API, not Vertex) | Experimental | Streaming | Instrumental | Free during preview |
+
+**Default:** `lyria-002` — cheapest, most stable, GA. Use Lyria 3 Pro when vocals/lyrics are needed.
+
+**Lyria RealTime:** Separate stack (Gemini API + AI Studio). Treat as its own integration if streaming music becomes relevant.
+
+### API Architecture
+
+Lyria 2 and Lyria 3 use different endpoint patterns:
+
+| Component | Lyria 2 | Lyria 3 (Pro/Clip) |
+|-----------|---------|---------------------|
+| API version | `v1` | `v1beta1` |
+| Location | `us-central1` (or other region) | `global` only |
+| Host | `{location}-aiplatform.googleapis.com` | `aiplatform.googleapis.com` (no region prefix) |
+| Path suffix | `publishers/google/models/{model}:predict` | `interactions` (no publisher, no :predict) |
+| Output | Base64 WAV in `predictions[]` | Base64 MP3 + lyrics + structure in `outputs[]` |
+
+**Common pitfall:** Calling Lyria 3 via the Lyria 2 endpoint returns `404 NOT_FOUND` with a misleading "your project does not have access" message. It is a routing error, not an access block.
+
+### Setup
+
+```bash
+# 1. Enable Vertex AI API in your GCP project
+gcloud services enable aiplatform.googleapis.com
+
+# 2. Authenticate
+gcloud auth application-default login
+gcloud config set project {{GCP_PROJECT}}
+
+# 3. Install dependencies
+pip install google-auth requests
+```
+
+Authentication: Application Default Credentials (same as Gemini TTS).
+
+### Capabilities and Limits
+
+- **Lyria 2:** 48 kHz stereo WAV, ~30s per clip. Prompt in US English. Supports `negative_prompt` and `seed`/`sample_count` (max 4). Instrumental only.
+- **Lyria 3 Pro:** Up to ~3 min. Supports user-specified lyrics. Multimodal input (text + reference image). Languages: EN, DE, ES, FR, HI, JA, KO, PT.
+- **All variants:** No streaming on Vertex (RealTime is separate). SynthID watermark embedded. Default quota: 10 requests/min per model. Content safety filters apply.
+
+### Relationship to Venice Music
+
+Venice (MiniMax/ACE-Step) remains available for music generation via Playwright. Lyria is the API-based alternative — faster for automated pipelines (Telegram bot delivery, scheduled generation) where browser automation is not ideal.
+
+---
+
 ## Status
 
 - [x] Gemini TTS (harry-tts.py) — live
@@ -253,6 +312,9 @@ Install: `pip install faster-whisper`
 - [x] Subprocess isolation — voice pipeline in separate process
 - [x] Whisper fallback — local GPU fallback when Gemini fails
 - [x] Memory profiling — tracemalloc before/after voice processing
+- [x] Lyria 2 (instrumental) — live via Vertex AI
+- [x] Lyria 3 Pro (vocals/lyrics) — live via Vertex AI
+- [ ] Lyria bot trigger integration — planned
 - [ ] Larry skills (/listen, /talk) — planned
 - [ ] Mood pattern analysis (night shift) — planned
 - [ ] Automatic Suno integration — planned

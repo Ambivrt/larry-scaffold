@@ -46,7 +46,7 @@ One orchestrator. Two senses. Eight organs. Three bones.
 | Service | Role |
 |---------|------|
 | **Memory (Milla)** | Semantic search, knowledge graph, diary, palace traversal. Never forgets. |
-| **Emotion (Bert)** | Sentiment scoring, mood tracking, trend detection. Measures, never interprets. |
+| **Emotion (Bert)** | Sentiment scoring, mood tracking, trend detection. Measures, never interprets. Phase 1 complete: `bert_service.py` (XLM-RoBERTa), `bert_cli.py` (CLI), `bert_batch.py` (batch processing). |
 | **Judgment (Parry)** | Privacy enforcement, tone control, quality gating. Flags, never blocks. |
 | **Time (Tarry)** | Reminders, follow-ups, recurring tasks. The agent that lingers. |
 | **Logistics (Carry)** | Transport content in/out/between systems. Pipelines with retry and approval gates. |
@@ -316,7 +316,7 @@ See [architecture/telegram-v2-spec.md](architecture/telegram-v2-spec.md) for the
 | **Barry** | Image generation | Larry | Venice (Playwright) | On-demand subprocess |
 | **Harry** | Audio / TTS | Larry | Vertex AI / Whisper | On-demand subprocess |
 | **Milla** | Semantic memory | All agents (via MCP) | ChromaDB | Persistent HTTP/SSE server |
-| **Bert** | Sentiment analysis | Larry / Telegram listener | XLM-RoBERTa (GPU) | On-demand (lazy-load) |
+| **Bert** | Sentiment analysis | Larry / Telegram listener | XLM-RoBERTa (GPU) | On-demand (lazy-load) — Phase 1 complete |
 | **Parry** | Privacy gatekeeper | Always-on middleware | Larry (flags) | Background daemon |
 | **Tarry** | Time / scheduling | Larry (queue write) | Larry (fires reminders) | Background daemon |
 | **Carry** | Content logistics | Larry / Darry / events | Filesystem, APIs, Playwright | Background daemon |

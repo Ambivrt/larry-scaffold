@@ -174,6 +174,67 @@ Never run headless. Always visible browser window.
 
 ---
 
+## Voice Stack (Larry Live)
+
+Larry has its own voice capability, separate from Harry. Where Harry is a production audio pipeline (TTS narration, music generation, SFX), Larry Live is real-time bidirectional voice conversation.
+
+### Architecture
+
+```
+Microphone → sounddevice (16kHz PCM)
+  → Gemini Live API (WebSocket, native audio model)
+  ← Audio response (24kHz PCM) → sounddevice playback
+  ← Text transcripts (both sides) → transcript log
+
+Per-turn context injection:
+  System prompt (personality) + Milla RAG results → prepended to each turn
+```
+
+Model: `gemini-live-2.5-flash-native-audio` (GA on Vertex AI).
+
+### Key Differences from Harry
+
+| | Larry Live | Harry |
+|---|-----------|-------|
+| **Purpose** | Real-time conversation | Production audio pipeline |
+| **Direction** | Bidirectional (mic + speaker) | Unidirectional (text in, audio out) |
+| **Latency** | Streaming (~200ms) | Batch (seconds) |
+| **Context** | Vault RAG + personality prompt per turn | Voice markup script |
+| **Model** | Gemini Live native audio | Gemini TTS / Venice / Lyria |
+| **Output** | Ephemeral (played, logged, discarded) | Persisted files (MP3/WAV) |
+
+### Context Injection
+
+Larry Live uses a hybrid context strategy:
+
+1. **Static pre-load** — Personality prompt, core facts, user profile. Loaded once at session start.
+2. **Dynamic RAG per turn** — Each user utterance triggers a Milla semantic search. Relevant vault context is injected into the next model turn, giving Larry access to vault knowledge during voice conversation.
+
+This means Larry can answer questions about vault contents, recall facts, and stay in-character during voice sessions — not just echo back canned responses.
+
+### Components
+
+| File | Function |
+|------|---------|
+| `voice/larry-live.py` | CLI streaming voice (local mic + speaker) |
+| `voice/larry_live_telegram.py` | Single-turn voice for Telegram (voice message in, audio reply out) |
+| `voice/larry_live_context.py` | Context manager: static pre-load + Milla RAG per turn |
+
+### Setup
+
+```bash
+# Dependencies (same as Harry STT/Live)
+pip install sounddevice numpy google-genai
+
+# Authentication
+gcloud auth application-default login
+gcloud config set project {{GCP_PROJECT}}
+```
+
+Uses the same GCP project and ADC credentials as Harry.
+
+---
+
 ## Nightly Automation
 
 Automated batch jobs via OS task scheduler:
