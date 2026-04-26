@@ -202,6 +202,39 @@ Larry text reply
 
 ---
 
+## Response Quality Rules
+
+The bot should never send canned acknowledgments. Every response must be a real thought from the model, or nothing at all.
+
+### Principles
+
+1. **Silence over empty ack.** If the API returns an empty or null response, send nothing. The user doesn't need a "Got it." that carries zero information.
+2. **No response pools.** Don't maintain arrays of canned one-liners ("Noted.", "Done.", "Logged.") for fallback. These feel hollow and erode trust in the bot's intelligence.
+3. **Callbacks = label only.** When the user taps an inline keyboard button (approve/skip/edit), reply with just the action label ("✅ Approved"). Don't append a random acknowledgment phrase.
+4. **System prompt enforces it.** Include "never reply with just an acknowledgment — give substance or stay silent" in the bot's system prompt as a hard rule.
+
+### Implementation
+
+```python
+# BAD — canned fallback
+reply = _call_api(text)
+final = reply if reply else "Noted."
+send(final)
+
+# GOOD — silence on empty
+reply = _call_api(text)
+if not reply:
+    log.info("Empty API response — staying silent")
+    return
+send(reply)
+```
+
+### Why this matters
+
+A personal AI assistant that says "Noted." multiple times per day trains the user to ignore it. The bot becomes notification noise instead of a trusted second brain. Every message the bot sends should be worth reading.
+
+---
+
 ## Persistence Layers
 
 Three parallel persistence mechanisms:
