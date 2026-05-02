@@ -89,20 +89,29 @@ python 03-projects/tarry/tarry_service.py --status
 
 ## Windows Task Scheduler Autostart
 
-Tarry should start automatically when you log in, like Parry.
+Tarry should start automatically when you log in, like Parry. The start script follows the [daemon-stability patterns](daemon-stability.md): liveness check after launch, stderr-only redirect, singleton guard, and `pythonw` for windowless operation.
 
 ```powershell
 # Register Tarry as a scheduled task (run once at setup)
 powershell -File 03-projects/tarry/startup/tarry-start.ps1
 ```
 
+The `tarry-start.ps1` script should:
+1. Check for an existing PID file (singleton guard)
+2. Launch with `pythonw.exe` (no console window)
+3. Redirect only stderr (let Python handle its own logging)
+4. Wait 800ms and verify the process is still alive (liveness check)
+5. Write the PID file on success
+
+See [daemon-stability.md](daemon-stability.md) for the full start script template.
+
 Or register manually:
 
 ```powershell
 $action = New-ScheduledTaskAction `
     -Execute "pythonw.exe" `
-    -Argument "D:\path\to\vault\03-projects\tarry\tarry_service.py" `
-    -WorkingDirectory "D:\path\to\vault"
+    -Argument "{{VAULT_PATH}}\03-projects\tarry\tarry_service.py" `
+    -WorkingDirectory "{{VAULT_PATH}}"
 
 $trigger = New-ScheduledTaskTrigger -AtLogon
 
@@ -290,7 +299,8 @@ A release chain pairs naturally with a vault-based content calendar (`content-ca
 
 ## See Also
 
-- [parry-setup.md](parry-setup.md) — Parry daemon (same process model)
-- [brains-bus-setup.md](brains-bus-setup.md) — Inter-agent event bus
-- [task-dispatch.md](task-dispatch.md) — Task queue system
-- [architecture-overview.md](architecture-overview.md) — Agent ecosystem overview
+- [daemon-stability.md](daemon-stability.md) -- Daemon stability patterns (start scripts, heartbeats, circuit breakers)
+- [parry-setup.md](parry-setup.md) -- Parry daemon (same process model)
+- [brains-bus-setup.md](brains-bus-setup.md) -- Inter-agent event bus
+- [task-dispatch.md](task-dispatch.md) -- Task queue system
+- [architecture-overview.md](architecture-overview.md) -- Agent ecosystem overview

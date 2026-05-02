@@ -61,7 +61,7 @@ All agents handle all four privacy levels. All have access to the freedom router
 
 | Tool | Role |
 |------|------|
-| **daemon-manager.py** | Unified start/stop/status/health for all daemons. Single CLI to manage entire ecosystem. |
+| **daemon-manager.py** | Unified start/stop/status/health for all daemons (Parry, Tarry, Carry, Darry, bot-listener). Single CLI to manage entire ecosystem. Uses a daemon registry as the single source of truth for both start-all and stop-all. See [docs/daemon-stability.md](docs/daemon-stability.md). |
 | **Brains Bus** | SQLite WAL event queue. All inter-agent communication. Parry sees everything. |
 | **FTS5 Index** | Full-text search across vault. BM25-ranked. Rebuilt automatically by Darry. |
 
@@ -320,7 +320,45 @@ The system is evolving toward a unified PWA that serves as the primary interface
 
 See [architecture/telegram-v2-spec.md](architecture/telegram-v2-spec.md) for the full technical spec.
 
-**Status:** Design phase — parked until architectural decisions are made.
+**Status:** Design phase -- parked until architectural decisions are made.
+
+---
+
+## Apps Layer
+
+The ecosystem supports lightweight apps built on top of the agent infrastructure. These are small Flask or FastAPI applications that reuse the brains-bus, daemons, and agents to solve specific personal problems.
+
+```
+03-projects/ml-brainclone/apps/
++-- my-app/
+|   +-- app.py            <- Flask/FastAPI entrypoint
+|   +-- start.ps1         <- Start script (follows daemon-stability patterns)
+|   +-- static/           <- Frontend assets
+|   +-- templates/        <- Jinja2 templates (Flask) or HTML
++-- another-app/
+    +-- ...
+```
+
+### What makes something an app vs. a daemon
+
+| | App | Daemon |
+|---|-----|--------|
+| **Purpose** | User-facing tool with UI | Background infrastructure service |
+| **Lifetime** | Runs while actively used, can be stopped | Runs continuously (24/7) |
+| **Interface** | Browser (localhost), sometimes PWA | Queue polling, bus events, heartbeat |
+| **Examples** | Rating tool, dashboard, content editor | Parry, Tarry, Carry, Darry |
+
+### Patterns
+
+- **Self-contained:** Each app has its own directory with `app.py`, `start.ps1`, static assets, and templates. No cross-app imports.
+- **Bus integration:** Apps post events to the brains-bus for inter-agent communication. They can invoke any agent by posting a request event.
+- **Start script:** Follows the same stability patterns as daemons (liveness check, stderr redirect, PID file). See [docs/daemon-stability.md](docs/daemon-stability.md).
+- **No daemon registration required:** Apps are not added to `daemon-manager.py` because they do not need to run 24/7. They are started and stopped independently.
+- **Privacy-aware:** Apps that handle L3/L4 content must run on localhost only. Use `app.run(host="127.0.0.1")`, never bind to `0.0.0.0` without access control.
+
+### Motivation
+
+Apps emerge when you notice yourself doing the same multi-step task repeatedly and want a dedicated UI for it. They are motivation-driven tools you build for yourself, not products. The agent infrastructure (bus, memory, agents) provides the backend -- the app just adds a thin UI layer.
 
 ---
 

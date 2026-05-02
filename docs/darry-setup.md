@@ -432,9 +432,10 @@ The key upgrade: conditional execution. The old batch runner does everything eve
 
 ## See Also
 
-- [parry-setup.md](parry-setup.md) — Parry daemon (same process model)
-- [tarry-setup.md](tarry-setup.md) — Tarry daemon (timing coordination)
-- [brains-bus-setup.md](brains-bus-setup.md) — Inter-agent event bus
-- [task-dispatch.md](task-dispatch.md) — Task queue system
-- [architecture-overview.md](architecture-overview.md) — Agent ecosystem overview
-- [memory-system.md](memory-system.md) — Milla / MemPalace setup
+- [daemon-stability.md](daemon-stability.md) -- Daemon stability patterns (start scripts, heartbeats, circuit breakers)
+- [parry-setup.md](parry-setup.md) -- Parry daemon (same process model)
+- [tarry-setup.md](tarry-setup.md) -- Tarry daemon (timing coordination)
+- [brains-bus-setup.md](brains-bus-setup.md) -- Inter-agent event bus
+- [task-dispatch.md](task-dispatch.md) -- Task queue system
+- [architecture-overview.md](architecture-overview.md) -- Agent ecosystem overview
+- [memory-system.md](memory-system.md) -- Milla / MemPalace setup

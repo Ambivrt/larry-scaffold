@@ -256,7 +256,8 @@ The daemon does this automatically once per hour. Archive database: `_private/br
 
 ## See Also
 
-- [privacy-architecture.md](privacy-architecture.md) — Privacy model Parry enforces
-- [brains-bus-setup.md](brains-bus-setup.md) — Bus architecture and setup
-- [larry-setup.md](larry-setup.md) — Larry configuration
-- [architecture-overview.md](architecture-overview.md) — System overview
+- [privacy-architecture.md](privacy-architecture.md) -- Privacy model Parry enforces
+- [brains-bus-setup.md](brains-bus-setup.md) -- Bus architecture and setup
+- [daemon-stability.md](daemon-stability.md) -- Daemon stability patterns (start scripts, heartbeats, circuit breakers)
+- [larry-setup.md](larry-setup.md) -- Larry configuration
+- [architecture-overview.md](architecture-overview.md) -- System overview

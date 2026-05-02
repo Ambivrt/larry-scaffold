@@ -355,5 +355,14 @@ Each bot gets:
 - `_private/notify-queue.json` — privacy L3. Ephemeral, not committed.
 - `_private/telegram-chat-history.json` — privacy L3. Rolling context.
 - `_private/telegram/*.md` — privacy L3. Daily logs, vault-searchable.
-- Bot name is personal/internal — never referenced in public repos.
+- Bot name is personal/internal -- never referenced in public repos.
 - Voice audio files stored outside vault (no binaries in vault).
+
+---
+
+## See Also
+
+- [daemon-stability.md](daemon-stability.md) -- Daemon stability patterns (the bot-listener is a long-running daemon)
+- [larry-setup.md](larry-setup.md) -- Larry configuration
+- [brains-bus-setup.md](brains-bus-setup.md) -- Inter-agent event bus
+- [architecture-overview.md](architecture-overview.md) -- System overview
