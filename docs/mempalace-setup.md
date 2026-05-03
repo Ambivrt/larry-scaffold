@@ -560,6 +560,73 @@ Write a replay script that reads the WAL, expands AAAK format, and re-inserts in
 
 On Windows, be careful with `start cmd` or background processes — they may invoke a different Python interpreter (e.g., WindowsApps stub vs real Python). Always use the explicit path.
 
+### MCP Singleton Proxy — Preventing HNSW Corruption
+
+**Problem:** Claude Code spawns one MCP server per session. Each creates a `chromadb.PersistentClient` that opens HNSW index files exclusively. Multiple PersistentClients on the same palace = HNSW corruption, leading to "Error finding id" exceptions and partial search results.
+
+**Solution:** Use a singleton proxy pattern. The first process becomes PRIMARY (runs the real mempalace MCP server and listens on a local TCP port). Subsequent processes become SECONDARY (proxy stdin/stdout over TCP to the primary). All ChromaDB access happens in one process.
+
+```python
+# mempalace-singleton.py (simplified)
+PORT = 18923
+LOCK_FILE = os.path.expanduser("~/.mempalace/singleton.lock")
+
+def main():
+    existing_pid = read_lock()
+    if existing_pid and process_alive(existing_pid):
+        # SECONDARY: proxy to primary via TCP
+        run_proxy(PORT)
+    else:
+        # PRIMARY: run real MCP server, listen on TCP
+        write_lock(os.getpid())
+        run_primary(PORT)
+```
+
+Configure in `.mcp.json`:
+```json
+{
+  "mcpServers": {
+    "mempalace": {
+      "command": "python",
+      "args": ["-X", "utf8", "$VAULT/03-projects/ml-brainclone/bus/mempalace-singleton.py"],
+      "env": { "MEMPALACE_PALACE_PATH": "$CONFIG/palace" }
+    }
+  }
+}
+```
+
+**Critical interaction with batch jobs:** The singleton holds ChromaDB's HNSW index open. Nightly batch jobs that need exclusive database access (e.g., `mempalace mine`) must kill the singleton first. The singleton restarts automatically on the next MCP call. See [daemon-stability.md](daemon-stability.md) pattern #9.
+
+```bash
+# In batch runner: kill singleton before mine
+SINGLETON_PIDS=$(pgrep -f "mempalace-singleton" 2>/dev/null || true)
+if [ -n "$SINGLETON_PIDS" ]; then
+    echo "$SINGLETON_PIDS" | xargs kill 2>/dev/null || true
+    sleep 2
+fi
+timeout 300 python -m mempalace mine "$VAULT"
+```
+
+### Post-Rebuild Verification
+
+After a palace rebuild, verify the new index:
+
+```bash
+# Check palace database exists
+ls ~/.mempalace/palace/chroma.sqlite3
+
+# Check drawer count and room distribution
+mempalace status
+
+# Verify search works
+mempalace search "test query"
+```
+
+**Target metrics for a well-indexed vault:**
+- `general` room should contain <5% of total drawers (good keyword routing)
+- Total drawer count should roughly match: (number of markdown files) * (average chunks per file, typically 2-5)
+- Search results should return relevant content, not config files or scripts
+
 ---
 
 ## For Multiple Agents

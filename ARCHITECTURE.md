@@ -51,7 +51,7 @@ One orchestrator. Three senses. Eight organs. Three bones.
 | **Judgment (Parry)** | Privacy enforcement, tone control, quality gating. Flags, never blocks. |
 | **Time (Tarry)** | Reminders, follow-ups, recurring tasks. The agent that lingers. |
 | **Logistics (Carry)** | Transport content in/out/between systems. Pipelines with retry and approval gates. |
-| **Sleep (Darry)** | Night shift 2.0: Light Sleep (quick hygiene), Deep Sleep (heavy processing), REM Sleep (creative insight). |
+| **Sleep (Darry)** | Night shift 2.0: Light Sleep (quick hygiene), Deep Sleep (heavy processing), REM Sleep (creative insight). Currently in Phase 1 migration mode — running parallel with legacy batch runner. |
 | **Conscience (Scarry)** | Retroactive scanner. Finds what you mentioned but never did. Asks, never instructs. |
 | **Language (Farry)** | All languages, human and machine. Translation, format conversion, bus integration, statistics tracking. CLI: translate, detect, stats, status, ordbok, convert. |
 

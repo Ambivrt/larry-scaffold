@@ -256,7 +256,53 @@ Call `acquire_singleton()` at the top of `main()` and `release_singleton()` in a
 
 ## Medium-Priority Patterns
 
-### 9. Consistent Heartbeat Format
+### 9. Kill Singletons Before Exclusive Resource Access
+
+**Problem:** A background MCP server (or any singleton process) holds an exclusive lock on a database (e.g., ChromaDB HNSW index). When a batch job needs to access the same database, it deadlocks — the batch waits for the lock, the singleton never releases it, and the batch runner's timeout kills everything. No output is produced. No error is logged.
+
+**Fix:** Before a batch job that needs exclusive database access, kill the singleton process that holds the lock. The singleton restarts automatically on the next MCP call.
+
+```bash
+# Kill singleton before exclusive access (e.g., reindexing)
+SINGLETON_PIDS=$(pgrep -f "my-singleton" 2>/dev/null || true)
+if [ -n "$SINGLETON_PIDS" ]; then
+    echo "Killing singleton (pids: $SINGLETON_PIDS) for exclusive DB access"
+    echo "$SINGLETON_PIDS" | xargs kill 2>/dev/null || true
+    sleep 2  # Wait for file handles to release
+fi
+
+# Now safe to access the database exclusively
+timeout 300 python -m my_indexer mine "$VAULT" || echo "Indexing failed (continuing)"
+```
+
+**Key insight:** The singleton pattern (#8) and this pattern work together. The singleton prevents accidental concurrent access during normal operation. But batch jobs that need exclusive access must deliberately kill the singleton first. Both patterns are necessary — neither alone is sufficient.
+
+**Real-world scenario:** A nightly indexer (mempalace mine) needs exclusive access to ChromaDB. The MCP singleton proxy holds the HNSW index open. Without killing the singleton first, the indexer deadlocks. The batch runner's 30-minute timeout kills the process, and all subsequent batches that depend on updated indexes produce no output. The failure is completely silent — no error in the log, just missing output files.
+
+---
+
+### 10. PATH Hardening for Batch Runners on Windows
+
+**Problem:** On Windows, `bash` in PATH may resolve to a WSL shim (`WindowsApps/bash.exe`) instead of Git Bash (`/usr/bin/bash`). When Windows Task Scheduler runs a bash script, the WSL shim intercepts the call, and the script runs in a different environment (wrong Python, wrong tools, wrong filesystem paths). Everything fails silently because the WSL environment has none of your tools installed.
+
+**Fix:** In batch runner scripts, explicitly prepend the correct `bash` location to PATH and remove the WindowsApps directory. Do this at the top of every script that Task Scheduler might call.
+
+```bash
+#!/bin/bash
+# PATH hardening -- defense in depth for Task Scheduler
+# Git Bash's /usr/bin MUST come first. WindowsApps contains a WSL bash shim
+# that hijacks `bash` calls and routes them to a different environment.
+export PATH="/usr/bin:/c/Users/$USER/.local/bin:/c/Program Files/nodejs:/c/Program Files/Git/bin:$PATH"
+export PYTHONIOENCODING=utf-8
+```
+
+**Why this is insidious:** The WSL shim does not produce an error. It launches WSL, which has its own `python3`, its own PATH, and no access to your Windows tools. Your script runs, but in the wrong universe. Logs show successful execution with zero useful output.
+
+**Detection:** If your scheduled batch suddenly produces empty output files, check `which bash` from the Task Scheduler context. If it resolves to `WindowsApps`, this is your problem.
+
+---
+
+### 11. Consistent Heartbeat Format
 
 **Problem:** If some daemons write heartbeat files as JSON (`{"ts": "...", "state": "..."}`) and others write plaintext ISO8601 timestamps, every health checker must handle both formats. This adds complexity and creates parsing bugs.
 
@@ -306,7 +352,7 @@ def check_heartbeat(heartbeat_path: Path, max_age_seconds: int = 120) -> bool:
 
 ---
 
-### 10. Stop Scripts Should Only Clean Up Their Own Heartbeats
+### 12. Stop Scripts Should Only Clean Up Their Own Heartbeats
 
 **Problem:** A stop-all script that deletes every `.heartbeat` file in a directory can accidentally kill heartbeats belonging to other subsystems (NAS sync, backup monitors, external tools).
 
@@ -323,7 +369,7 @@ def stop_all():
 
 ---
 
-### 11. Use pythonw on Windows
+### 13. Use pythonw on Windows
 
 **Problem:** Starting daemons with `python.exe` on Windows opens a console window that flickers and steals focus. If the daemon is started by Task Scheduler or from a startup script, the console window is either visible and annoying or minimized and confusing.
 

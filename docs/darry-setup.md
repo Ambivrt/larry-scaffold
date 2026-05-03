@@ -393,13 +393,36 @@ powershell -File 03-projects/darry/startup/darry-status.ps1
 
 If you are currently using a sequential nightly batch runner (batch 1 through N, running unconditionally every night), Darry replaces it in phases:
 
-| Migration Phase | What Happens |
-|-----------------|-------------|
-| Phase 1 — Parallel | Darry runs alongside the existing batch runner. Compare outputs |
-| Phase 2 — Light takeover | Darry takes over cleanup/triage batches. Disable corresponding batch jobs |
-| Phase 3 — Deep takeover | Darry takes over indexing, KG, distillation batches. Disable those batch jobs |
-| Phase 4 — Full takeover | Darry owns all nightly work. Remove the old batch runner cron/scheduler entry |
-| Phase 5 — REM activation | Enable REM Sleep. This is net-new functionality with no batch equivalent |
+| Migration Phase | What Happens | Status |
+|-----------------|-------------|--------|
+| **Phase 1 — Parallel** | **Darry runs alongside the existing batch runner. Compare outputs** | **Active** |
+| Phase 2 — Light takeover | Darry takes over cleanup/triage batches. Disable corresponding batch jobs | Pending |
+| Phase 3 — Deep takeover | Darry takes over indexing, KG, distillation batches. Disable those batch jobs | Pending |
+| Phase 4 — Full takeover | Darry owns all nightly work. Remove the old batch runner cron/scheduler entry | Pending |
+| Phase 5 — REM activation | Enable REM Sleep. This is net-new functionality with no batch equivalent | Pending |
+
+### Current State: Migration Mode
+
+Darry v1 is deployed and running in `migration_mode: true`. In this mode:
+
+- Darry runs as a daemon alongside the legacy nightly batch runner
+- Both systems produce output independently
+- Darry evaluates conditions and logs what it *would* do
+- The legacy runner still handles actual nightly work
+- This allows comparing Darry's decisions against legacy output before handover
+
+Key implementation details from the running system:
+
+```python
+# darry-config.json -- migration_mode flag
+{
+  "migration_mode": true,
+  "poll_seconds": 60,
+  "heartbeat_every": 30
+}
+```
+
+The daemon polls every 60 seconds, checking if the current time falls within the night window (22:00-06:00). When the window opens and tonight's phases have not yet run, it executes them sequentially with interruptible waits between phases.
 
 ### Mapping old batches to Darry phases
 
@@ -416,6 +439,18 @@ If you are currently using a sequential nightly batch runner (batch 1 through N,
 
 The key upgrade: conditional execution. The old batch runner does everything every night regardless of need. Darry evaluates conditions and skips phases that have nothing to do. This saves model cost and produces cleaner reports (no "nothing found" noise).
 
+### Lessons from Parallel Running
+
+Running both systems simultaneously revealed several patterns:
+
+1. **Singleton kill before indexing.** The nightly batch runner must kill the MCP singleton before running `mempalace mine`, because the singleton holds ChromaDB's HNSW index open. Without this, the indexer deadlocks and the batch runner's timeout kills everything silently. Darry handles this internally. See [daemon-stability.md](daemon-stability.md) pattern #9.
+
+2. **PATH hardening on Windows.** When Task Scheduler runs bash scripts, the WSL shim in `WindowsApps` can intercept `bash` calls. The batch runner's PATH must explicitly prepend Git Bash and exclude WindowsApps. See [daemon-stability.md](daemon-stability.md) pattern #10.
+
+3. **Condition evaluation is cheap.** Darry checks vault changes, inbox age, and days since last run in <1 second. The decision "should Deep Sleep run?" costs nothing compared to running it unconditionally.
+
+4. **"Already ran tonight" guard.** A state file tracks which phases completed tonight. If the daemon restarts mid-night (crash, update), it resumes from the next uncompleted phase instead of re-running everything.
+
 ---
 
 ## Integration with Other Agents
@@ -426,6 +461,8 @@ The key upgrade: conditional execution. The old batch runner does everything eve
 | **Tarry** | Provides timing coordination. Can trigger Darry phases outside normal schedule if needed |
 | **Carry** | Receives morning brief for delivery (email, vault storage) |
 | **Milla** | Deep Sleep dispatches memory indexing work to Milla |
+| **Scarry** | Hooked into Deep Sleep. Darry runs Scarry scanner, feeds results to REM if triggered |
+| **Bert** | Deep Sleep runs daily mood snapshot (Warry/Bert sentiment analysis) |
 | **Larry** | Receives morning brief at session init. Can request dream topics via bus |
 
 ---

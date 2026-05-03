@@ -50,6 +50,7 @@ ml-brainclone/
 │   ├── barry_audit.py                <- Unified JSONL audit-log for Barry events
 │   ├── gws_mailer.py                 <- Outgoing-mail helper with local archiving
 │   ├── vault-ingest.py               <- Convert documents (PDF/DOCX/PPTX/XLSX) to vault Markdown
+│   ├── nightly-runner.sh             <- Nightly batch runner (PATH hardening, singleton kill, batch dispatch)
 │   ├── system_tag_batch.py           <- Path-based system/* tagging (idempotent), see docs/system-taxonomy.md
 │   ├── parry-scheduled-task.xml      <- Windows Task Scheduler template for Parry autostart
 │   └── register-parry-task.ps1       <- One-shot registration script (run once at setup)
@@ -102,7 +103,7 @@ Larry orchestrates everything. Barry, Harry, and Garry are invoked by Larry when
 - **Best model first** — Always use the best available model. Fall back to freer models only on guardrail refusal.
 - **Robust over quick** — Never a hack. The system must be reliable enough to trust as your second brain.
 - **Yolo mode** — Larry runs with `--dangerously-skip-permissions`. No confirmation prompts.
-- **Nightly automation** — Scheduled tasks run overnight (Claude Haiku): vault hygiene, inbox triage, knowledge distillation.
+- **Nightly automation** — Scheduled tasks run overnight (Claude Haiku): vault hygiene, inbox triage, knowledge distillation. Darry (sleep-cycle daemon) runs in migration mode alongside the legacy batch runner.
 
 ---
 
@@ -179,7 +180,7 @@ Throughout all files, replace these with your own values:
 | [docs/memory-system.md](docs/memory-system.md) | How persistent memory works |
 | [docs/privacy-architecture.md](docs/privacy-architecture.md) | Privacy layers and enforcement |
 | [docs/logging-architecture.md](docs/logging-architecture.md) | Save-everything rule: transcript, audit, mail, event-bus |
-| [docs/daemon-stability.md](docs/daemon-stability.md) | Daemon stability patterns: start scripts, heartbeats, circuit breakers, singleton guards |
+| [docs/daemon-stability.md](docs/daemon-stability.md) | Daemon stability patterns: start scripts, heartbeats, circuit breakers, singleton guards, resource locking, PATH hardening |
 | [docs/task-dispatch.md](docs/task-dispatch.md) | Inter-agent work queue: dispatch tasks from any channel (Telegram, mail, CLI) |
 | [docs/proactivity.md](docs/proactivity.md) | Larry acts, doesn't just report: init-scanner + bus dispatcher + nightly triggers |
 | [docs/agent-capabilities.md](docs/agent-capabilities.md) | Capability matrix for all agents: tools, skill domains, ecosystem flow |
