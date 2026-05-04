@@ -39,6 +39,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 import task_lib  # noqa: E402
+import session_pool  # noqa: E402
 
 BUS_DIR = os.environ.get("BRAINS_BUS_DIR")
 BUS_AVAILABLE = False
@@ -115,6 +116,73 @@ def _run_subprocess(cmd: list[str], cwd: Path | None = None) -> dict:
                 "detail": "", "error": str(e)}
 
 
+def _run_claude_session(agent: str, prompt: str, cwd: str) -> dict:
+    """CLI dispatch with session pooling and JSON output.
+
+    Reuses --resume sessions to skip CLI boot overhead. Falls back to a
+    cold start if the session is invalid. Tracks failures and auto-clears
+    after MAX_FAILURES consecutive errors (see session_pool.py).
+    """
+    sid = session_pool.get_session_id(agent)
+    claude = os.environ.get("CLAUDE_BIN", "claude")
+
+    cmd = [
+        claude, "--print",
+        "--dangerously-skip-permissions",
+        "--output-format", "json",
+        "-p", prompt,
+    ]
+    if sid:
+        cmd.extend(["--resume", sid])
+
+    log.info(f"[{agent}] executor: claude ({sid[:8] + '...' if sid else 'new'})")
+
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True,
+            timeout=TASK_TIMEOUT_S, encoding="utf-8", errors="replace",
+            cwd=cwd,
+        )
+        output = (proc.stdout or "").strip()
+        err = (proc.stderr or "").strip()
+
+        if proc.returncode != 0 and not output:
+            if sid and ("session" in err.lower() or "not found" in err.lower()):
+                log.warning(f"[{agent}] invalid session, retrying cold")
+                session_pool.clear_session(agent)
+                return _run_claude_session(agent, prompt, cwd)
+            session_pool.update_session(agent, sid or "", False)
+            return {"success": False, "summary": f"exit {proc.returncode}",
+                    "detail": output[:2000], "error": err[:1000]}
+
+        try:
+            result = json.loads(output)
+            new_sid = result.get("session_id", "")
+            reply = result.get("result", "")
+            if new_sid:
+                session_pool.update_session(agent, new_sid, True)
+            summary = reply.split("\n\n")[0][:400] if reply else "(empty)"
+            return {"success": True, "summary": summary,
+                    "detail": reply[:4000], "error": None}
+        except json.JSONDecodeError:
+            session_pool.update_session(agent, sid or "", True)
+            summary = output.split("\n\n")[0][:400] if output else "(empty)"
+            return {"success": True, "summary": summary,
+                    "detail": output[:4000], "error": None}
+
+    except subprocess.TimeoutExpired:
+        session_pool.update_session(agent, sid or "", False)
+        return {"success": False, "summary": f"exceeded {TASK_TIMEOUT_S}s",
+                "detail": "", "error": "TimeoutExpired"}
+    except FileNotFoundError:
+        return {"success": False, "summary": "claude CLI not found",
+                "detail": "", "error": "FileNotFoundError: claude"}
+    except Exception as e:
+        session_pool.update_session(agent, sid or "", False)
+        return {"success": False, "summary": f"{type(e).__name__}",
+                "detail": "", "error": str(e)}
+
+
 def executor_larry(task: dict) -> dict:
     title = task["title"]
     desc = task["description"]
@@ -123,9 +191,7 @@ def executor_larry(task: dict) -> dict:
         "Do the work. Reply with a short (max 3 sentences) summary of what "
         "you did or what blocked you."
     )
-    claude = os.environ.get("CLAUDE_BIN", "claude")
-    cmd = [claude, "-p", prompt, "--dangerously-skip-permissions"]
-    return _run_subprocess(cmd, cwd=_vault_root())
+    return _run_claude_session("larry", prompt, str(_vault_root()))
 
 
 def executor_harry(task: dict) -> dict:
@@ -140,9 +206,7 @@ def executor_harry(task: dict) -> dict:
         f"DESCRIPTION:\n{desc}\n\n"
         "Do the work. Short summary back (max 3 sentences)."
     )
-    claude = os.environ.get("CLAUDE_BIN", "claude")
-    cmd = [claude, "-p", prompt, "--dangerously-skip-permissions"]
-    return _run_subprocess(cmd, cwd=Path(harry_dir))
+    return _run_claude_session("harry", prompt, harry_dir)
 
 
 def executor_barry(task: dict) -> dict:

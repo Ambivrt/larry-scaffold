@@ -186,14 +186,46 @@ The notification back to the user is where async messaging genuinely helps — t
 
 ---
 
+## Session Pooling
+
+By default, each task spawns a fresh `claude -p` process: full CLI boot, CLAUDE.md read, MCP init, hook execution. For sequential tasks this overhead is significant.
+
+**Session pooling** (inspired by Pi.dev's RPC mode) reuses CLI sessions via `--resume`:
+
+```
+Task 1: claude --print --output-format json -p "..." → session_id=abc123
+Task 2: claude --print --output-format json -p "..." --resume abc123  ← skips boot
+Task 3: claude --print --output-format json -p "..." --resume abc123
+```
+
+The `session_pool.py` module manages this:
+
+- Stores session IDs per agent in `_private/task-session-{agent}.json`
+- Auto-expires sessions after 1 hour of inactivity
+- Clears a session after 3 consecutive failures
+- Detects invalid sessions (e.g., after CLI update) and retries cold
+
+```python
+import session_pool
+
+sid = session_pool.get_session_id("larry")
+# ... run claude with --resume sid ...
+session_pool.update_session("larry", new_session_id, success=True)
+```
+
+Both `executor_larry` and `executor_harry` in `agent_task_watcher.py` use session pooling. Barry and Parry don't (Barry runs its own script; Parry is direct).
+
+---
+
 ## Files
 
 ```
 agents/task_lib.py              — create/claim/complete + frontmatter mutation
 agents/agent_task_watcher.py    — universal watcher (run with --agent <name>)
+agents/session_pool.py          — persistent CLI session management
 bus/parry_service.py            — guardian; manages MANAGED_TASK_AGENTS
 notifications/larry_bot_listener.py
                                 — dispatch_task tool + result subscriber thread
 ```
 
-See the reference implementations in `scripts/task_lib.py` and `scripts/agent_task_watcher.py`.
+See the reference implementations in `scripts/task_lib.py`, `scripts/agent_task_watcher.py`, and `scripts/session_pool.py`.

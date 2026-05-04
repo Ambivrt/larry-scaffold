@@ -487,6 +487,79 @@ Remove-Item $Heartbeat -ErrorAction SilentlyContinue
 
 ---
 
+### 14. Watchdog Process for Auto-Recovery
+
+**Problem:** If a daemon crashes and nobody restarts it, its responsibilities go unmet. The user may not notice for hours (especially when away from the machine). The circuit breaker (#3) notifies, but doesn't heal.
+
+**Fix:** Run a dedicated watchdog process that polls all daemon PID files every 60 seconds. If a daemon's PID file is missing or the process behind it is dead, the watchdog clears stale files and restarts it automatically.
+
+```powershell
+# watchdog.ps1 -- runs as a hidden background process
+while ($true) {
+    foreach ($d in $daemons) {
+        $alive = Test-DaemonAlive -PidFile $d.PidFile
+        if (-not $alive) {
+            Clear-StaleFiles -PidFile $d.PidFile -LockFile $d.LockFile
+            Restart-Daemon -Daemon $d
+        }
+    }
+    Start-Sleep -Seconds 60
+}
+```
+
+Integrate into your start-all script so it launches automatically:
+
+```powershell
+# At the end of larry-start.ps1
+Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File watchdog.ps1" -WindowStyle Hidden
+```
+
+**Key design decisions:**
+- Uses the same daemon registry as start-all/stop-all (pattern #4)
+- Writes its own PID file so start-all can detect if it's already running
+- Logs every restart to `watchdog.log` for audit
+- Does NOT restart itself — the OS Task Scheduler or start-all handles watchdog crashes
+
+See `scripts/watchdog.ps1` for the reference implementation.
+
+---
+
+### 15. Protect Daemons from Accidental Mass-Kill
+
+**Problem:** The AI agent (or a careless script) can run `taskkill /IM pythonw.exe` or `Stop-Process -Name python` and kill every daemon at once. If the user is remote, nothing restarts until they return.
+
+**Fix:** Add a PreToolUse hook that intercepts shell commands and blocks patterns that would mass-kill daemons:
+
+```bash
+#!/bin/bash
+# protect-daemons.sh -- Claude Code PreToolUse hook
+INPUT="$CLAUDE_TOOL_INPUT"
+
+if echo "$INPUT" | grep -qiE 'taskkill.*//(IM|im)\s*(pythonw|python)'; then
+  echo "BLOCKED: mass-kill would destroy all daemons." >&2
+  exit 2
+fi
+
+if echo "$INPUT" | grep -qiE 'Stop-Process.*(-Name|ProcessName)\s*(pythonw?|"pythonw?")'; then
+  echo "BLOCKED: Stop-Process -Name python kills all daemons." >&2
+  exit 2
+fi
+
+exit 0
+```
+
+Register in `.claude/settings.json`:
+```json
+{
+  "matcher": "Bash|PowerShell",
+  "hooks": [{ "type": "command", "command": "bash hooks/protect-daemons.sh" }]
+}
+```
+
+**Rule:** The agent can kill a specific PID if asked. It cannot kill all Python processes at once.
+
+---
+
 ## Checklist for Adding a New Daemon
 
 1. Add to `daemon_registry.py` (or equivalent central list)
@@ -494,12 +567,13 @@ Remove-Item $Heartbeat -ErrorAction SilentlyContinue
 3. Create `stop-<name>.ps1` from the template above
 4. Verify `daemon-manager.py start-all` includes the new daemon
 5. Verify `daemon-manager.py stop-all` includes the new daemon
-6. Implement singleton guard in the Python entrypoint
-7. Implement circuit breaker with notification (if applicable)
-8. Use `RotatingFileHandler` for logging (not stdout redirect)
-9. Write heartbeats in JSON format to the standard heartbeat directory
-10. Register in Windows Task Scheduler for autostart (AtLogon trigger)
-11. Add to Darry's Light Sleep heartbeat check list
+6. Add to the watchdog daemon list (`scripts/watchdog.ps1`)
+7. Implement singleton guard in the Python entrypoint
+8. Implement circuit breaker with notification (if applicable)
+9. Use `RotatingFileHandler` for logging (not stdout redirect)
+10. Write heartbeats in JSON format to the standard heartbeat directory
+11. Register in Windows Task Scheduler for autostart (AtLogon trigger)
+12. Add to Darry's Light Sleep heartbeat check list
 
 ---
 

@@ -55,20 +55,39 @@ skill:
 
 ## INDEX.md Format
 
+Organize skills into categories with trigger keywords per category. The agent scans category headers and triggers — only loads the skill file on match. This keeps the discovery step cheap on context.
+
 ```markdown
-## Active Skills
+## Categories
 
-| Skill | Trigger (short) | Path | Version |
-|-------|-----------------|------|---------|
-| `vault-ingest` | Convert documents to vault markdown | [[vault-ingest]] | 1.0 |
-| `image-prompts` | Image generation prompting | [[image-guide]] | 1.0 |
+### System & Agents
+Trigger: build agent, new daemon, Python/Bash code, debug, refactor, bus integration, convert document
 
-## Triggers (detailed)
+| Skill | Path |
+|-------|------|
+| `agent-development` | [[agent-development]] |
+| `system-coding` | [[system-coding]] |
+| `vault-ingest` | [[vault-ingest]] |
 
-### vault-ingest
-- "convert this file to markdown"
-- "import document into vault"
+### Image & Audio
+Trigger: image, prompt, diffusion, upscale, TTS, STT, music, SFX
+
+| Skill | Path |
+|-------|------|
+| `image-prompts` | [[image-guide]] |
+| `audio-skills` | [[audio-skills]] |
+
+### Business & Strategy
+Trigger: business plan, budget, sales, negotiation, legal, SEO
+
+| Skill | Path |
+|-------|------|
+| `business-planning` | [[business-planning]] |
+| `financial-reasoning` | [[financial-reasoning]] |
+| `sales-thinking` | [[sales-thinking]] |
 ```
+
+**Why categories?** A flat table of 20+ skills forces the agent to scan every row. Categories let it skip entire groups ("this task has nothing to do with Business & Strategy") and zoom into the right cluster. Same progressive disclosure principle, applied one level earlier.
 
 ## When to Create a Skill
 

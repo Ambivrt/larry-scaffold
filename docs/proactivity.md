@@ -138,10 +138,50 @@ step, stop the daemon) when you want to reduce noise.
 
 ---
 
+## Layer 4 — Pre-turn context injection
+
+Layers 1-3 create work. Layer 4 injects **awareness**: fresh bus events and
+fired reminders surface mid-session without the agent having to ask.
+
+`scripts/inject-context.py` runs as a Claude Code `PreToolUse` hook on all
+major tools. It reads the bus SQLite DB directly (no subprocess), checks for
+fired reminders, and writes to stderr (which Claude sees as a system message).
+
+**Throttled to one check per 90 seconds.** All other invocations exit after
+a single timestamp comparison (~0ms overhead).
+
+```
+# .claude/settings.json
+{
+  "matcher": "Bash|PowerShell|Read|Edit|Write|Glob|Grep|Agent|WebFetch|WebSearch",
+  "hooks": [{ "type": "command", "command": "python hooks/inject-context.py" }]
+}
+```
+
+Output (only when there are new events):
+```
+BUS-UPDATE:
+  #1548 marcus->* telegram-inbound [pass]
+  #1549 carry->larry carry-delivered [pass]
+REMINDERS-FIRED:
+  tarry-weekly-review: Weekly review reminder
+```
+
+**Why this matters:** Session-init loads context once. But sessions can run
+for hours. Without injection, the agent operates on stale state — it doesn't
+know a task failed, a reminder fired, or a new Telegram message arrived. This
+closes the gap between "events happen" and "the agent knows about them."
+
+Configure via env vars: `VAULT_ROOT`, `BUS_DB_PATH`, `REMINDER_QUEUE`,
+`INJECT_THROTTLE`.
+
+---
+
 ## Files
 
 ```
-scripts/proactive_scanner.py    — session-init scanner
-scripts/event_dispatcher.py     — bus-subscribing daemon
+scripts/proactive_scanner.py    — session-init scanner (layer 1)
+scripts/event_dispatcher.py     — bus-subscribing daemon (layer 3)
+scripts/inject-context.py       — pre-turn context injection hook (layer 4)
 docs/task-dispatch.md           — underlying dispatch infra (prereq)
 ```
