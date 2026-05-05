@@ -66,6 +66,7 @@ Darry owns the night. From the moment the user goes to sleep until the morning b
 | Diary compression | Summarize older diary entries, preserve the core | >50 unsummarized entries |
 | Archive sweep | Inactive projects (>30d) flagged for archival | Every 7th night |
 | FTS rebuild | Full-text search index rebuild | Every 7th night OR >50 file changes |
+| Feedback audit | Cross-reference feedback rules vs. nattrapport violations, update tracker, generate Hot 10 | Always. See [feedback-loop.md](feedback-loop.md) |
 
 **Adaptive logic:** Deep Sleep has conditions. If no condition is met, the phase is skipped entirely. The night does not need to be long if nothing heavy needs doing.
 
